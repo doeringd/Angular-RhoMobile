@@ -215,7 +215,7 @@ var Rho = Rho || (function ($) {
         }
 
         var cmdText = JSON.stringify(cmd, wrapFunctions);
-        console.log(cmdText);
+        //console.log(cmdText);
 
         var result = null;
         var deferred = new $.Deferred(function (dfr) {
@@ -427,15 +427,26 @@ var Rho = Rho || (function ($) {
     var createPropProxy_fallback = function (obj, propDescr, propAccess, apiReqFunc, idFunc, customGet, customSet) {
         var propName = propDescr.split(':')[0];
 
-        function accessorName(accessor, name) {
-            return accessor + name.charAt(0).toUpperCase() + name.slice(1);
+        function accessorName(accessor, propDescr) {
+            var names = propDescr.split(':');
+            var propName = names[0];
+            var getterName = names[1];
+            var setterName = names[2];
+
+            if (('get' == accessor) && getterName)
+                return getterName;
+
+            if (('set' == accessor) && setterName)
+                return setterName;
+
+            return accessor + propName.charAt(0).toUpperCase() + propName.slice(1);
         }
 
         if (0 <= propAccess.indexOf('w')) {
-            obj[accessorName('set', propName)] = propAccessReqFunc(apiReqFunc, propDescr, 'w', idFunc, customSet);
+            obj[accessorName('set', propDescr)] = propAccessReqFunc(apiReqFunc, propDescr, 'w', idFunc, customSet);
         }
         if (0 <= propAccess.indexOf('r')) {
-            obj[accessorName('get', propName)] = propAccessReqFunc(apiReqFunc, propDescr, 'r', idFunc, customGet);
+            obj[accessorName('get', propDescr)] = propAccessReqFunc(apiReqFunc, propDescr, 'r', idFunc, customGet);
         }
     };
 
@@ -465,8 +476,8 @@ var Rho = Rho || (function ($) {
             obj.__defineSetter__(propName, propAccessReqFunc(apiReqFunc, propDescr, 'w', idFunc, customSet));
         };
     } else {
-        // Sorry, no luck. We can provide just a default implementation with explicit accessors.
-        // It is the best thing we can do.
+        // Sorry, no luck. We able provide just a default implementation with explicit accessors.
+        // It is the best thing we can do in this case.
     }
 
     var incompatibleProps = [];
@@ -586,7 +597,7 @@ var Rho = Rho || (function ($) {
                 var result = null;
                 var err = null;
                 if (resultObj) {
-                    result = resultObj['result'];
+                    result = jsValue(resultObj['result']);
                     err = resultObj['error'];
                 }
                 opts.callback(result, err);
@@ -614,11 +625,34 @@ var Rho = Rho || (function ($) {
         });
     }
 
+    // === Old API support ===========================================================
 
+    function importOldApiTo(namespace) {
+        // move non-conflicting modules from old js api to this one
+        if ('undefined' != typeof window.RhoOld) {
+            if ('object' == typeof window.RhoOld) {
+                for (var prop in window.RhoOld) {
+                    if (window.RhoOld.hasOwnProperty(prop)
+                        && 'undefined' != typeof window.RhoOld[prop]
+                        && 'undefined' == typeof namespace[prop]) {
+
+                        namespace[prop] = window.RhoOld[prop];
+                    }
+                }
+            }
+            //delete window.RhoOld;
+            window.RhoOld = undefined;
+        }
+        return namespace;
+    }
 
     // === Utility internal methods ==================================================
 
     var util = {
+        flag: {
+            USE_AJAX_BRIDGE: '__rho_useAjaxBridge',
+            NATIVE_BRIDGE_TYPE: '__rho_nativeBridgeType'
+        },
         loadApiModules: loadApiModules,
         namespace: namespace,
         namespaceAlias: namespaceAlias,
@@ -634,18 +668,28 @@ var Rho = Rho || (function ($) {
     };
 
     var platform = {
+        id: {
+            AJAX: 'ajax',
+            AUTO: 'auto',
+            RHOSIMLATOR: 'rhosimulator',
+            ANDROID: 'android',
+            IPHONE:  'iphone',
+            WP8: 'wp8',
+            WM: 'wm',
+            WIN32: 'win32'
+        },
         nativeApiCall: nativeApiCall_ajax,
         nativeApiResult: function(){/* intentionally empty stub function */}
     }
 
     // === Public interface ==========================================================
 
-    return {
-        jQuery: $,
-        util: util,
-        platform: platform,
-        callbackHandler: callbackHandler
-    };
+    return importOldApiTo({
+            jQuery: $,
+            util: util,
+            platform: platform,
+            callbackHandler: callbackHandler
+    });
 
 })(jQuery.noConflict(true));
 // Module Rho.ORM
@@ -663,6 +707,12 @@ var Rho = Rho || (function ($) {
     'user' :     1,
     'app'  : 20001,
     'local': 40001
+  };
+
+  var clearFreeSourceIds = function(){
+    freeSourceIds['user'] = 1;
+    freeSourceIds['app'] = 20001;
+    freeSourceIds['local'] = 40001;
   };
   var getSourceId = function(partition) {
     return freeSourceIds[partition];
@@ -871,8 +921,17 @@ var Rho = Rho || (function ($) {
     setDefault('sync_priority', 1000);
     setDefault('sync_type', 'none');
     setDefault('partition', (source['sync_type'] !== 'none') ? 'user' : 'local');
-    setDefault('source_id', getSourceId(source['partition']));
-    accountSourceId(source['partition'], source['source_id']);
+
+    // setup source id from table if it has already been loaded before
+    var db = Rho.ORMHelper.dbConnection(source['partition']);
+    var res = db.$execute_sql("select * from sources where name = '" + modelName + "'");
+    if(res !== undefined && res[0] !== undefined){
+      source['source_id'] = res[0].map.source_id;
+    }
+    else{
+      setDefault('source_id', getSourceId(source['partition']));
+      accountSourceId(source['partition'], source['source_id']);
+    }
     sources['$[]='](modelName, source);
     return source;
   };
@@ -921,15 +980,15 @@ var Rho = Rho || (function ($) {
     var res = Opal.Rhom['$any_model_changed?']();
     return res;
   }
-
-  function databaseFullResetEx(ary_models,reset_client_info,reset_local_models){
+//ary_models,reset_client_info,reset_local_models
+  function databaseFullResetEx(args_hash){
     //set default values if nothing is passed
-    reset_client_info = typeof reset_client_info !== 'undefined' ? reset_client_info : false;
-    reset_local_models = typeof reset_local_models !== 'undefined' ? reset_local_models : false;
+    var reset_client_info = typeof args_hash["reset_client_info"] !== 'undefined' ? args_hash["reset_client_info"] : false;
+    var reset_local_models = typeof args_hash["reset_local_models"] !== 'undefined' ? args_hash["reset_local_models"] : false;
 
     var sources = Rho.ORMHelper.getAllSources();
     var old_interval;
-    var ary = ary_models['models'];
+    var ary = args_hash['models'];
 
     if(Rho.RhoConnectClient !== undefined){
       old_interval = Rho.RhoConnectClient.pollInterval;
@@ -1031,8 +1090,16 @@ var Rho = Rho || (function ($) {
 
   function databaseLocalReset(){
     db = Rho.ORMHelper.dbConnection("local");
-    db.$execute_sql("UPDATE sources SET token=0");
-    db.$execute_sql("DELETE FROM sources");
+    $.each(Rho.ORMHelper.getAllSources(),function(src_name,model){
+        if(model['partition'] === "local"){
+          if(model['schema'] !== undefined){
+            db.$execute_sql("DROP TABLE " + src_name);
+            Rho.ORMHelper.createTable(model);
+          }
+          else
+            db.$execute_sql("DELETE FROM object_values WHERE source_id=" + model['source_id']);
+        }
+    });
   }
 
   function databaseFullResetAndLogout(){
@@ -1063,8 +1130,9 @@ var Rho = Rho || (function ($) {
       //TODO should belongs_to assocations with models not sync enabled be ignored?
       if(source['belongs_to'] !== undefined && source['belongs_to'] !== null)
         processBelongsTo(source);
-      Rho.ORMHelper.syncSource(source);
+      //Rho.ORMHelper.syncSource(source);
     }
+    Rho.ORMHelper.syncSource(source);
 
     var opalModel = Opal.Object._scope[modelName];
     return {
@@ -1078,6 +1146,8 @@ var Rho = Rho || (function ($) {
             return opalModel.$count();
         },
         find: function(what, options) {
+          if(what === undefined)
+            what = "all";
           var found = opalModel.$find(what,options);
           if(JSON.stringify(found).length == 2)
             return [];
@@ -1103,11 +1173,14 @@ var Rho = Rho || (function ($) {
       models = {};
       Rho.ORMHelper.clearAllSources();
     },
-    databaseLocalReset: function(partition){
-      databaseFullReset(false,true);
+    clearFreeSourceIds: function(){
+      clearFreeSourceIds();
     },
-    databaseFullResetEx: function(ary,resetLocalModels){
-      databaseFullResetEx(ary,resetLocalModels);
+    databaseLocalReset: function(){
+      databaseLocalReset();
+    },
+    databaseFullResetEx: function(args_hash){
+      databaseFullResetEx(args_hash);
     },
     databaseFullResetAndLogout: function(){
       databaseFullResetAndLogout();
@@ -1275,17 +1348,25 @@ var Rho = Rho || (function ($) {
   };
 
   function initDbSource(db, source){
-    var columns = 'sync_priority,source_id,partition, sync_type, schema_version, associations, blob_attribs, name';
-    var db_sources = db.$select_from_table('sources',columns);
+    var sql = "select sync_priority,source_id,partition, sync_type, schema_version, associations, blob_attribs, name from sources where name ='" + source['name'] + "'";
+    var db_source_raw = db.$execute_sql(sql);
+    var db_source;
+    
+    if(db_source_raw.length > 0)
+      db_source = db_source_raw[0].map;
+    else
+      db_source = null;
+
     var blob_attribs = processBlobAttribs(source);
 
     var start_id = getStartId(source);
-    var db_source = findSrcByname(db_sources,source['name']);
     var hash_migrate = {};
-    if(db_source !== null)
+    if(db_source !== null){
       updateSourceModel(db,source,db_source,hash_migrate);
-    else
+    }
+    else{
       createSourceModel(db,source,start_id,blob_attribs);
+    }
   }
 
   function getStartId(source){
@@ -1303,23 +1384,10 @@ var Rho = Rho || (function ($) {
     return start_id;
   }
 
-  function findSrcByname(db_sources,name){
-    var res = null;
-    if(db_sources !== undefined){
-      for(var i=0;i<db_sources.length;i++){
-        if(db_sources[i]['name'] == name){
-          res = db_sources[i];
-          break;
-        }
-      }
-    }
-    return res;
-  }
-
   function createSourceModel(db,source,start_id,blob_attribs){
     // Need to find out how bulk mode is set
     //if Rho::RhoConfig.use_bulk_model.to_s != 'true' && Rho::RhoConfig.use_bulk_model.to_s != '1'
-    if(source['source_id'] !== undefined || source['source_id'] !== null){
+    if(source['source_id'] === undefined || source['source_id'] === null){
         source['source_id'] = start_id;
         Opal.Rho._scope.RhoConfig.$sources().map[source['name']]['source_id'] = start_id;
         start_id += 1;
@@ -1329,7 +1397,7 @@ var Rho = Rho || (function ($) {
         "schema_version":source['schema_version'], 'associations':source['associations'],'blob_attribs':blob_attribs }));
   }
 
-  function updateSourceModel(db,source,db_source,hash_migrate){
+  function updateSourceModel(db,source,source_db,hash_migrate){
     var final_hash = {"name":source['name']};
     if(source_db['sync_priority'] !== source['sync_priority'])
         final_hash["sync_priority"] = source['sync_priority'];
@@ -1348,8 +1416,8 @@ var Rho = Rho || (function ($) {
     if(source_db['blob_attribs'] !== source['blob_attribs'])
       final_hash["blob_attribs"] = source['blob_attribs'];
 
-
-    db.$update_into_table('sources', __hash(final_hash));
+    //console.log("final hash is: " + JSON.stringiffinal_hash);
+    db.$update_into_table('sources', Opal.hash2(final_hash),Opal.hash2({"source_id":source["source_id"]}));
     if(source['source_id'] === undefined || source['source_id'] === null){
         source['source_id'] = source_db['source_id'];
         Opal.Rho._scope.RhoConfig.$sources().map[source['name']]['source_id'] = source_db['source_id'];
@@ -1385,7 +1453,7 @@ var Rho = Rho || (function ($) {
         }
         source['str_blob_attribs'] = str;
       }
-      console.log("str blob is: " + source['str_blob_attribs']);
+      //console.log("str blob is: " + source['str_blob_attribs']);
       return source['str_blob_attribs'];
     }
   }
@@ -1458,7 +1526,7 @@ var Rho = Rho || (function ($) {
   };
   rhoUtil.namespace(moduleNS, ORMHelper, true);
 
-})(Rho.jQuery, Rho, Rho.util);
+})(jQuery, Rho, Rho.util);
 // Module Rho.Ruby.RunTime
 
 (function ($, rho, rhoUtil) {
@@ -6632,10 +6700,8 @@ var Rho = Rho || (function ($) {
 
                 var update_into_table = function(table, values, condition) {
                     var columns = makeSetParams(values.map);
-
                     var query = ['update "' + table + '"', columns.clause];
                     var values = columns.values;
-
                     if (condition !== undefined) {
                         var where = makeWhereParams(condition.map, 'and');
                         query.push(where.clause);
@@ -6733,8 +6799,6 @@ var Rho = Rho || (function ($) {
 
             Rhom['$any_model_changed?'] = function() {
               var TMP_1;
-              //changed this to Rho.ORMHelper.getDbPartitions
-              //(__opal.Object._scope.Rho)._scope.RHO.$get_db_partitions()
               var partitions = Rho.ORMHelper.getDbPartitions();
               $.each(partitions, function(index, db) {
                 var result = nil, self = this, _a, _b;
@@ -6743,10 +6807,10 @@ var Rho = Rho || (function ($) {
                 result = db.$execute_sql("SELECT object FROM changed_values LIMIT 1 OFFSET 0", []);
                 if(result.length > 0){
                   TMP_1 = true;
-                  return true;
                 } 
                 else {
-                  TMP_1 = nil;
+                  if(TMP_1 !== true)
+                    TMP_1 = nil;
                 };
               });
               if(TMP_1 == true)
@@ -8873,6 +8937,7 @@ var Rho = Rho || (function ($) {
     rhoUtil.createPropsProxy(Application, [
         { propName: 'appBundleFolder', propAccess: 'r' }
       , { propName: 'appsBundleFolder', propAccess: 'r' }
+      , { propName: 'bundleFolder', propAccess: 'r' }
       , { propName: 'userFolder', propAccess: 'r' }
       , { propName: 'configPath', propAccess: 'r' }
       , { propName: 'modelsManifestPath', propAccess: 'r' }
@@ -8883,7 +8948,7 @@ var Rho = Rho || (function ($) {
       , { propName: 'splash', propAccess: 'r' }
       , { propName: 'version', propAccess: 'r' }
       , { propName: 'title', propAccess: 'rw' }
-      , { propName: 'name', propAccess: 'r' }
+      , { propName: 'appName', propAccess: 'r' }
       , { propName: 'locale', propAccess: 'r' }
       , { propName: 'country', propAccess: 'r' }
       , { propName: 'nativeMenu', propAccess: 'rw' }
@@ -9916,9 +9981,7 @@ var Rho = Rho || (function ($) {
 
     rhoUtil.createPropsProxy(Push.prototype, [
         { propName: 'type', propAccess: 'r' }
-      , { propName: 'deviceId', propAccess: 'r' }
       , { propName: 'userNotifyMode', propAccess: 'rw' }
-      , { propName: 'senderId', propAccess: 'r' }
       , { propName: 'pushServer', propAccess: 'r' }
       , { propName: 'pushAppName', propAccess: 'r' }
     ], apiReq, function(){ return this.getId(); });
@@ -10000,7 +10063,7 @@ var Rho = Rho || (function ($) {
     
 
         rhoUtil.createPropsProxy(Push, [
-            { propName: 'default:getDefault:setDefault', propAccess: 'rw', customSet: function(obj) { if(!obj || 'function' != typeof obj.getId){ throw 'Default object should provide getId method!' }; currentDefaultID = obj.getId(); } }
+            { propName: 'defaultInstance:getDefault:setDefault', propAccess: 'rw', customSet: function(obj) { if(!obj || 'function' != typeof obj.getId){ throw 'Default object should provide getId method!' }; currentDefaultID = obj.getId(); } }
           , { propName: 'defaultID:getDefaultID:setDefaultID', propAccess: 'rw', customSet: function(id) { currentDefaultID = id; } }
         ], apiReq);
 
@@ -10015,9 +10078,7 @@ var Rho = Rho || (function ($) {
 
         rhoUtil.createPropsProxy(Push, [
             { propName: 'type', propAccess: 'r' }
-          , { propName: 'deviceId', propAccess: 'r' }
           , { propName: 'userNotifyMode', propAccess: 'rw' }
-          , { propName: 'senderId', propAccess: 'r' }
           , { propName: 'pushServer', propAccess: 'r' }
           , { propName: 'pushAppName', propAccess: 'r' }
         ], apiReq, function(){ return this.getId(); });
@@ -10317,7 +10378,8 @@ var Rho = Rho || (function ($) {
     // === System static properties ===
 
     rhoUtil.createPropsProxy(System, [
-        { propName: 'platform', propAccess: 'r' }
+        { propName: 'main_window_closed', propAccess: 'r' }
+      , { propName: 'platform', propAccess: 'r' }
       , { propName: 'hasCamera', propAccess: 'r' }
       , { propName: 'screenWidth', propAccess: 'r' }
       , { propName: 'screenHeight', propAccess: 'r' }
@@ -10937,6 +10999,8 @@ var Rho = Rho || (function ($) {
 
 (function ($, rho, rhoPlatform, rhoUtil) {
     'use strict';
+
+    if (window[rhoUtil.flag.NATIVE_BRIDGE_TYPE] && window[rhoUtil.flag.NATIVE_BRIDGE_TYPE] == rhoPlatform.id.AJAX) return;
 
     var RHO_API_CALL_TAG = '__rhoNativeApiCall';
     var RHO_API_TAG = '__rhoNativeApi';

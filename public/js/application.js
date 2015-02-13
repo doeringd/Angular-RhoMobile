@@ -1,11 +1,11 @@
 (function() {
 
-	$(document).bind("mobileinit", function () {
-	    $.mobile.ajaxEnabled = false;
-	    $.mobile.linkBindingEnabled = false;
-	    $.mobile.hashListeningEnabled = false;
-	    $.mobile.pushStateEnabled = false;
-	});
+	// $(document).bind("mobileinit", function () {
+	//     $.mobile.ajaxEnabled = false;
+	//     $.mobile.linkBindingEnabled = false;
+	//     $.mobile.hashListeningEnabled = false;
+	//     $.mobile.pushStateEnabled = false;
+	// });
 
 
 	// Uncomment for RhoConnect integration
@@ -17,11 +17,12 @@
 			// model.enable("sync");
 			model.property("name", "string");
 			model.property("brand", "string");
+			model.property("available", "boolean");
 			model.set("partition", "app");
 	});
 
 
-	var productApp = angular.module("ProductApp", ['ngRoute']);
+	var productApp = angular.module("ProductApp", ['ngRoute', 'ionic']);
 
 
 	productApp.factory("ProductHelper", function() {
@@ -82,7 +83,8 @@
 				return { 
 					object: rhoProduct.object(),
 					name: rhoProduct.get("name"),
-					brand: rhoProduct.get("brand")
+					brand: rhoProduct.get("brand"),
+					available: rhoProduct.get("available")
 				}
 			}
 		};
@@ -128,7 +130,9 @@
 				$scope.product = ProductHelper.to_hash(rhoProduct);
 				$scope.rhoProduct = rhoProduct;
 			} else {
-				$scope.product = {};
+				$scope.product = {
+					available: false
+				};
 			}
 
 			$scope.save = function() {
@@ -142,7 +146,7 @@
 			}
 		}
 	);
-
+	
 	productApp.config(function($routeProvider) {
 			$routeProvider.when("/app", {
 				templateUrl: "/public/partials/index.html",
@@ -165,13 +169,13 @@
 		ProductHelper.load_products();
 	});
 
-	// directive to trigger "create" on an ngRepeat after the last element is rendered
-	productApp.directive("jqmElement", function() {
-		return function(scope, element, attrs) {
-			if (scope.$last) {
-				$(element).closest(".ui-page").trigger("create");
-			}
-		}
-	});
+	// // directive to trigger "create" on an ngRepeat after the last element is rendered
+	// productApp.directive("jqmElement", function() {
+	// 	return function(scope, element, attrs) {
+	// 		if (scope.$last) {
+	// 			$(element).closest(".ui-page").trigger("create");
+	// 		}
+	// 	}
+	// });
 
 })();

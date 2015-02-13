@@ -1,12 +1,27 @@
-        <div data-role="header">
-          <h1><span data-ng-show="product.object">Edit</span> <span data-ng-hide="product.object">New</span> product</h1>
-        </div>
-        <div data-role="content" >
-                  <form class="edit-product-form">
-                    
-                    <label>Name<input type="text" name="name" data-ng-model="product.name"></label>
-                    <label>Brand<input type="text" name="brand" data-ng-model="product.brand"></label>
+<ion-view>
+  <ion-header-bar class='bar-stable'>
+    <h2 class='title'>
+      <span data-ng-show="product.object">Edit</span> 
+      <span data-ng-hide="product.object">New</span> Product
+    </h2>
+  </ion-header-bar>
 
-                    <a data-role="button" class="save" data-ng-click="save()">Save</a>
-                  </form>
-        </div>
+  <ion-content class='padding has-header'>
+  <!-- <div class='content has-header padding'> -->
+    <ion-list class='has-header'>
+      <ion-item>
+        <label>
+          <input type='text' placeholder='Name' data-ng-model='product.name'>
+        </label>
+      </ion-item>
+      <ion-item>
+        <label>
+          <input type='text' placeholder='Brand' data-ng-model='product.brand'>
+        </label>
+      </ion-item>  
+        <ion-toggle class="item" data-ng-model="product.available" toggle-class="toggle-calm">Available</ion-toggle>            
+    </ion-list>
+    <a class='button button-block button-balanced' data-ng-click='save()'>Save</a>
+  <!-- </div> -->
+  </ion-content>
+</ion-view>

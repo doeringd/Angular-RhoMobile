@@ -1,25 +1,23 @@
-<div data-role="page" data-add-back-btn="true">
-
-  <div data-role="header" data-position="inline">
-    <h1>Login</h1>
-  </div>
-
-  <div data-role="content">
+<ion-view>
+  
+  <ion-header-bar>
+    <h2 class='title'>Login</h2>
+  </ion-header-bar>
+   <ion-content class='padding has-header'>
     <form method="POST" action="<%= url_for :action => :do_login %>">
+      <ion-list class='list-inset'>
+        <ion-item class='item-input'>
+          <input type='text' id='login' placeholder='Login'>
+        </ion-item>
+        <ion-item class='item-input'>
+          <input type='text' id='password' placeholder='Password'>
+        </ion-item>
+      </ion-list>
       <% if @msg %>
-          <div class="error-message"><%= @msg %></div>
+        <p class="assertive"><%= @msg %></p>
       <% end %>
-
-      <div data-role="fieldcontain">
-        <label for="login" class="itemLabel">Login</label>
-        <input type="text" id="login" name="login" class="itemValue" <%= placeholder("Login") %> />
-      </div>
-      <div data-role="fieldcontain">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" class="itemValue" <%= placeholder("Password") %> />
-      </div>
-      <input type="submit" value="Login"/>
+      <input class='button button-block button-balanced' type="submit" value="Login"/>       
     </form>
-  </div>
+  </ion-content>
 
-</div>
+</ion-view>

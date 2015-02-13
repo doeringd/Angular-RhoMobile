@@ -1,26 +1,52 @@
 
-      <a data-role="button" data-ng-click="create()">New product</a>
-      <a data-role="button" data-ng-click="create_with_data()">New product with data</a>
-      <!-- uncomment for RhoConnect integration 
-      <button data-ng-click="sync">Sync</button>
-      -->
+<ion-view>
+  <ion-header-bar class="bar-subheader item-input-inset">
+    <label class="item-input-wrapper">
+      <i class="icon ion-ios7-search placeholder-icon"></i>
+      <input type="search" data-ng-model="query" placeholder="Search">
+    </label>    
+  </ion-header-bar>
+  <ion-content class='padding has-subheader'>    
+    <button class='button button-block button-positive' data-role="button" data-ng-click="create()">New product</button>
+    <button class='button button-block button-positive' data-role="button" data-ng-click="create_with_data()">New product with data</button>
+    <!-- uncomment for RhoConnect integration
+    <button data-ng-click="sync">Sync</button>
+    -->
 
-      <table class="products">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Brand</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-            <tr data-ng-repeat="product in products" data-jqm-element="">
-              <td class="name">{{ product.name }}</td>
-              <td class="brand">{{ product.brand }}</td>
-              <td class="actions">
-                <a data-role="button" data-ng-href="#/edit/{{product.object}}">Edit</a>
-                <a data-role="button" data-ng-click="del(product.object)">Delete</a>
-              </td>
-            </tr>
-        </tbody>
-      </table>    
+    <div class="card" data-ng-repeat="product in products | filter:query">
+      <div class="item item-divider">
+        {{product.brand}}
+      </div>
+      <div class="item item-text-wrap row">
+        <div class='col'>
+          <div class='dark'>{{product.name}}</div>
+          <div data-ng-class="{{product.available}} ? 'balanced' : 'assertive'">
+            {{product.available === 'true' ? 'Available' : 'Not Available'}}
+          </div>
+        </div>
+        <div class='col col-offset-20'>
+          <a class='button' data-role="button" data-ng-href="#/edit/{{product.object}}">Edit</a>
+          <a class='button' data-role="button" data-ng-click="del(product.object)">Delete</a>
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- <ion-list class='list-inset'>
+      <ion-item class='row'
+       data-ng-class="{{product.available}} ? 'balanced' : 'assertive'"
+       data-ng-repeat='product in products | filter:query'
+       data-ng-filter="query">
+        <div class='col'>
+          <div class='dark'>{{product.name}}</div>
+          <div> {{product.brand}}</div>
+        </div>
+        <div class='col col-offset-20'>
+          <a class='button' data-role="button" data-ng-href="#/edit/{{product.object}}">Edit</a>
+          <a class='button' data-role="button" data-ng-click="del(product.object)">Delete</a>
+        </div>
+      </ion-item>
+    </ion-list> -->
+
+  </ion-content>
+</ion-view>

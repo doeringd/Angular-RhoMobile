@@ -1,14 +1,22 @@
-<div data-role="page">
+<ion-view>
 
-  <div data-role="header" data-position="inline">
-    <h1>Reset Database</h1>
-    <a href="<%= url_for :action => :index %>" class="ui-btn-left" data-icon="back" data-direction="reverse">Cancel</a>
-    <a href="<%= url_for :action => :do_reset %>" class="ui-btn-right" data-icon="check" data-direction="reverse">Confirm</a>
-  </div>
+	<ion-header-bar>
+    	<h2 class='title'>Reset Database</h2>
+  	</ion-header-bar>
+  
+  	<ion-content class='padding has-header'>
+  		<div class='row'>
+  			<h3>Are you sure?</h3>	    	
+	    </div>
+	    <div class='row'>
+	    	<p>Resetting removes all objects from your device.</p>
+	    </div>
+  		<div class='row'>
+		    <a href="<%= url_for :action => :index %>" class="button col button-energized">Cancel</a>
+		    <a href="<%= url_for :action => :do_reset %>" class="button col col-offset-10 button-balanced">Confirm</a>
+		  </div>
+	  
+	    
+	</ion-content>
 
-  <div data-role="content">
-    <h3>Are you sure?</h3>
-    <div style="margin: 10px;">Resetting removes all objects from your device.</div>
-  </div>
-
-</div>
+</ion-view>

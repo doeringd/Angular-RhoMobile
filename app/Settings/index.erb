@@ -1,33 +1,27 @@
-<div data-role="page">
-
-  <div data-role="header" data-position="inline">
-    <h1>Settings</h1>
-  </div>
-
-  <div data-role="content">
-    <ul data-role="listview">
+<ion-nav-view>
+  <ion-view>
+    <ion-header-bar>
+      <h1 class='title'>Settings</h1>
+    </ion-header-bar>
+    <div class='bar bar-subheader'>
+      <div class="itemLabel">
+        <span class="title">Client ID:</span>
+      </div>
+      <div class="itemValue">
+        <span class="clientID"><%= Rhom::Rhom::client_id %></span>
+      </div>
+    </div>
+    <ion-content class='has-header has-subheader padding'>
       <% if @msg %>
-          <li class="error-message"><%= @msg %></li>
+          <p class="energized"><%= @msg %></p>
       <% end %>
-
-                  
-      <li>
-        <div class="itemLabel">
-          <span class="title">Client ID:</span>
-        </div>
-        <div class="itemValue">
-          <span class="clientID"><%= Rhom::Rhom::client_id %></span>
-        </div>
-      </li>
-
-      <li><a href="<%= url_for :action => :reset %>">Reset Database</a></li>
-      <li><a href="<%= url_for :action => :do_sync %>">Perform Sync</a></li>
+      <a class='button button-block button-positive' href="<%= url_for :action => :reset %>">Reset Database</a>
+      <a class='button button-block button-energized' href="<%= url_for :action => :do_sync %>">Perform Sync</a>
       <% if SyncEngine::logged_in > 0 %>
-          <li><a href="<%= url_for :action => :logout %>">Logout</a></li>
+        <a class='button button-block button-assertive' href="<%= url_for :action => :logout %>">Logout</a>
       <% else %>
-          <li><a href="<%= url_for :action => :login %>">Login</a></li>
+        <a class='button button-block button-balanced' href="<%= url_for :action => :login %>">Login</a>
       <% end %>
-           
-    </ul>
-  </div>
-</div>
+    </ion-content>
+  </ion-view>
+</ion-nav-view>

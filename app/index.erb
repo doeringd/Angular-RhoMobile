@@ -1,23 +1,22 @@
-<div data-role="page" data-url="<%= Rho::RhoConfig.start_path %>/" >
-    <div data-role="header" data-position="inline">
-      <h1>Product Manager</h1>
-      <% if SyncEngine::logged_in > 0 %>
-      <a href="<%= url_for :controller => :Settings, :action => :do_sync %>" class="ui-btn-left" data-icon="refresh">
+
+<!-- <div data-url="<%= Rho::RhoConfig.start_path %>/" > -->
+<!--     <div data-position="inline"> -->
+  <ion-header-bar class='bar-light'>
+    <h1 class='title'>Product Manager</h1>
+    <% if SyncEngine::logged_in > 0 %>
+      <a href="<%= url_for :controller => :Settings, :action => :do_sync %>" class="button button-clear">
         Sync
       </a>
-      <a href="<%= url_for :controller => :Settings, :action => :logout %>" class="ui-btn-right" data-icon="star">
+      <a href="<%= url_for :controller => :Settings, :action => :logout %>" class="button button-clear">
         Logout
       </a>
-      <% else %>
-          <a href="<%= url_for :controller => :Settings, :action => :login %>" class="ui-btn-right" data-icon="star">Login</a>
-      <% end %>
-    </div>
+    <% else %>
+      <a href="<%= url_for :controller => :Settings, :action => :login %>" class="button button-clear">
+        Login
+      </a>
+    <% end %>
+  </ion-header-bar>
 
-  
-    <div data-role="content" data-ng-controller="HomeCtrl">
-    
-      <div data-ng-view>
-      </div>
-    </div>
-
-</div>
+  <div class='has-header' data-ng-controller="HomeCtrl">  
+    <ion-nav-vew data-ng-view></ion-nav-vew>
+  </div>
